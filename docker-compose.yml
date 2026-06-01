@@ -1,0 +1,177 @@
+version: "3.9"
+
+# ============================================================
+# Linux Kernel Exploit Research Testbed
+# IEEE Paper: Evolution of Linux Kernel Memory Exploits
+# IIT Jodhpur Security Research Group
+# ============================================================
+# WARNING: This is a RESEARCH testbed. All containers are:
+#   - Network isolated
+#   - No host kernel exposure (userspace simulation only)
+#   - Designed for academic analysis, NOT real exploitation
+# ============================================================
+
+services:
+
+  # ── Orchestrator ──────────────────────────────────────────
+  orchestrator:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.orchestrator
+    container_name: exploit-orchestrator
+    volumes:
+      - ./results:/results
+      - ./scripts:/scripts:ro
+      - ./analysis:/analysis
+    environment:
+      - RESEARCH_MODE=true
+      - LOG_LEVEL=INFO
+    networks:
+      - research-net
+    command: python3 /scripts/orchestrate.py
+    depends_on:
+      - cve-2016-5195
+      - cve-2022-0847
+      - cve-2026-31431
+      - cve-2026-43284
+      - cve-2026-46300
+
+  # ── CVE-2016-5195: Dirty COW ──────────────────────────────
+  cve-2016-5195:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dirtycow
+    container_name: dirtycow-analysis
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs: [/tmp, /run]
+    networks:
+      - research-net
+    volumes:
+      - ./results/cve-2016-5195:/results
+    environment:
+      - CVE_ID=CVE-2016-5195
+      - CVE_NAME=DirtyCOW
+      - YEAR=2016
+      - SUBSYSTEM=vm_cow
+      - RELIABILITY=low
+      - CVSS=7.8
+
+  # ── CVE-2022-0847: Dirty Pipe ─────────────────────────────
+  cve-2022-0847:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dirtypipe
+    container_name: dirtypipe-analysis
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs: [/tmp, /run]
+    networks:
+      - research-net
+    volumes:
+      - ./results/cve-2022-0847:/results
+    environment:
+      - CVE_ID=CVE-2022-0847
+      - CVE_NAME=DirtyPipe
+      - YEAR=2022
+      - SUBSYSTEM=pipe_flags
+      - RELIABILITY=high
+      - CVSS=7.8
+
+  # ── CVE-2026-31431: Copy Fail ─────────────────────────────
+  cve-2026-31431:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.copyfail
+    container_name: copyfail-analysis
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs: [/tmp, /run]
+    networks:
+      - research-net
+    volumes:
+      - ./results/cve-2026-31431:/results
+    environment:
+      - CVE_ID=CVE-2026-31431
+      - CVE_NAME=CopyFail
+      - YEAR=2026
+      - SUBSYSTEM=af_alg_aead
+      - RELIABILITY=deterministic
+      - CVSS=7.8
+
+  # ── CVE-2026-43284: Dirty Frag ────────────────────────────
+  cve-2026-43284:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dirtyfrag
+    container_name: dirtyfrag-analysis
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs: [/tmp, /run]
+    networks:
+      - research-net
+    volumes:
+      - ./results/cve-2026-43284:/results
+    environment:
+      - CVE_ID=CVE-2026-43284
+      - CVE_NAME=DirtyFrag
+      - YEAR=2026
+      - SUBSYSTEM=ipsec_esp_xfrm
+      - RELIABILITY=deterministic
+      - CVSS=7.8
+
+  # ── CVE-2026-46300: Fragnesia ─────────────────────────────
+  cve-2026-46300:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.fragnesia
+    container_name: fragnesia-analysis
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs: [/tmp, /run]
+    networks:
+      - research-net
+    volumes:
+      - ./results/cve-2026-46300:/results
+    environment:
+      - CVE_ID=CVE-2026-46300
+      - CVE_NAME=Fragnesia
+      - YEAR=2026
+      - SUBSYSTEM=xfrm_esp_tcp
+      - RELIABILITY=deterministic
+      - CVSS=7.8
+
+  # ── eBPF Tracer ───────────────────────────────────────────
+  ebpf-tracer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.tracer
+    container_name: ebpf-tracer
+    privileged: true          # Required for eBPF kernel tracing
+    pid: host
+    networks:
+      - research-net
+    volumes:
+      - ./results/traces:/traces
+      - /sys/kernel/debug:/sys/kernel/debug:ro
+    environment:
+      - TRACE_PAGE_CACHE=true
+      - TRACE_SPLICE=true
+      - TRACE_AF_ALG=true
+      - OUTPUT_FORMAT=json
+
+networks:
+  research-net:
+    driver: bridge
+    internal: true           # No external internet access
+

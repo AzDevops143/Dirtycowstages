@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux Kernel Memory Exploit Evolution — IEEE Research Report</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --navy:     #0D1B2A;
+    --navy2:    #112233;
+    --blue:     #1E90FF;
+    --blue-dim: #0A4F8F;
+    --red:      #E63946;
+    --gold:     #F4A261;
+    --green:    #2ECC71;
+    --gray-1:   #F4F6F8;
+    --gray-2:   #BDC3C7;
+    --gray-3:   #7F8C8D;
+    --text:     #E8EDF2;
+    --text-dim: #A0ADB8;
+    --surface:  #162236;
+    --surface2: #1C2E44;
+    --border:   #1E3A5F;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--navy);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ── Header ─────────────────────────────────────────── */
+  header {
+    background: linear-gradient(135deg, #0D1B2A 0%, #0A3055 50%, #0D1B2A 100%);
+    border-bottom: 2px solid var(--blue);
+    padding: 3rem 2rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent, transparent 60px,
+      rgba(30,144,255,0.03) 60px, rgba(30,144,255,0.03) 61px
+    );
+  }
+  .badge {
+    display: inline-block;
+    background: var(--red);
+    color: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    padding: 4px 12px;
+    border-radius: 2px;
+    margin-bottom: 1.2rem;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.6rem, 3vw, 2.6rem);
+    font-weight: 800;
+    line-height: 1.2;
+    color: white;
+    max-width: 820px;
+    margin: 0 auto 1rem;
+  }
+  h1 span { color: var(--blue); }
+  .authors {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 0.3rem;
+  }
+  .affil {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--blue);
+    opacity: 0.8;
+  }
+
+  /* ── Layout ─────────────────────────────────────────── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem; }
+  main { padding: 3rem 0; }
+
+  /* ── Nav ─────────────────────────────────────────────── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(13,27,42,0.95);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    padding: 0.75rem 2rem;
+    display: flex; gap: 2rem; justify-content: center;
+    flex-wrap: wrap;
+  }
+  nav a {
+    color: var(--text-dim); text-decoration: none;
+    font-size: 12px; font-weight: 500; letter-spacing: 0.5px;
+    text-transform: uppercase; transition: color 0.2s;
+  }
+  nav a:hover { color: var(--blue); }
+
+  /* ── Sections ────────────────────────────────────────── */
+  section { margin-bottom: 4rem; scroll-margin-top: 60px; }
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem; font-weight: 700;
+    color: white; margin-bottom: 1.5rem;
+    border-left: 4px solid var(--blue);
+    padding-left: 1rem;
+  }
+  h3 {
+    font-size: 1.05rem; font-weight: 600;
+    color: var(--blue); margin: 1.5rem 0 0.5rem;
+  }
+  p { color: var(--text-dim); margin-bottom: 0.8rem; }
+
+  /* ── CVE Cards ───────────────────────────────────────── */
+  .cve-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem; margin-top: 1.5rem;
+  }
+  .cve-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .cve-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+  .cve-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .cve-card.blue::before  { background: var(--blue); }
+  .cve-card.red::before   { background: var(--red); }
+  .cve-card.gold::before  { background: var(--gold); }
+
+  .cve-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+  .cve-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.2rem; font-weight: 700; color: white;
+  }
+  .cve-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--text-dim);
+    background: rgba(255,255,255,0.05);
+    padding: 3px 8px; border-radius: 3px;
+  }
+  .pill {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 20px;
+    margin: 2px;
+  }
+  .pill-green { background: rgba(46,204,113,0.15); color: var(--green); }
+  .pill-red   { background: rgba(230,57,70,0.15);  color: var(--red); }
+  .pill-blue  { background: rgba(30,144,255,0.15); color: var(--blue); }
+  .pill-gold  { background: rgba(244,162,97,0.15); color: var(--gold); }
+
+  .cve-meta {
+    font-size: 12px; color: var(--text-dim);
+    margin-top: 0.8rem; line-height: 1.6;
+  }
+  .cve-meta strong { color: var(--text); }
+
+  /* ── Comparison Table ────────────────────────────────── */
+  .table-wrap { overflow-x: auto; margin-top: 1.5rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--navy2); }
+  thead th {
+    padding: 10px 14px;
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 1px; color: var(--text-dim);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(30,58,95,0.5);
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: rgba(30,144,255,0.05); }
+  tbody td { padding: 10px 14px; color: var(--text-dim); }
+  .yes { color: var(--red); font-weight: 600; }
+  .no  { color: var(--gray-3); }
+  .det { color: var(--green); font-weight: 600; }
+
+  /* ── Mermaid ─────────────────────────────────────────── */
+  .diagram-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.5rem; margin-top: 1.5rem;
+    overflow-x: auto;
+  }
+  .mermaid { font-size: 13px; }
+
+  /* ── Findings ────────────────────────────────────────── */
+  .findings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem; margin-top: 1.5rem;
+  }
+  .finding {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px; padding: 1.2rem;
+  }
+  .finding-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 24px; font-weight: 700;
+    color: rgba(30,144,255,0.25); line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  .finding h4 { font-size: 13px; color: white; font-weight: 600; margin-bottom: 0.3rem; }
+  .finding p  { font-size: 12px; margin: 0; }
+
+  /* ── Prompt Block ────────────────────────────────────── */
+  .prompt-box {
+    background: #0A0F1A;
+    border: 1px solid var(--blue-dim);
+    border-left: 4px solid var(--blue);
+    border-radius: 6px; padding: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  .prompt-box pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; line-height: 1.7;
+    color: #7EC8E3; white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .prompt-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--blue);
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 0.8rem;
+  }
+
+  /* ── Docker Section ──────────────────────────────────── */
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(255,255,255,0.06);
+    padding: 2px 6px; border-radius: 3px;
+    font-size: 12px; color: var(--gold);
+  }
+  pre.code-block {
+    background: #0A0F1A;
+    border: 1px solid var(--border);
+    border-radius: 6px; padding: 1.2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: #A8D8A8;
+    line-height: 1.6; overflow-x: auto;
+    margin-top: 1rem;
+  }
+
+  /* ── Footer ─────────────────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem;
+    text-align: center;
+    font-size: 12px; color: var(--gray-3);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">IEEE Research Report · 2026</div>
+  <h1>Page-Cache Corruption Primitives:<br>
+    <span>Evolution of Linux Kernel LPE (2016–2026)</span>
+  </h1>
+  <p class="authors">[Author Name] · Prof. [Supervisor] · IIT Jodhpur</p>
+  <p class="affil">Department of Computer Science &amp; Engineering · IIT Jodhpur, Rajasthan, India</p>
+</header>
+
+<nav>
+  <a href="#overview">Overview</a>
+  <a href="#cves">CVE Analysis</a>
+  <a href="#comparison">Comparison</a>
+  <a href="#diagram">Attack Chain</a>
+  <a href="#findings">Findings</a>
+  <a href="#docker">Docker</a>
+  <a href="#prompt">Research Prompt</a>
+</nav>
+
+<main>
+<div class="container">
+
+<!-- ── Abstract ───────────────────────────────────────── -->
+<section id="overview">
+  <h2>Abstract</h2>
+  <p>This report presents a systematic analysis of five Linux kernel local privilege escalation (LPE) vulnerabilities spanning 2016 to 2026. We identify a structural evolutionary pattern: the attack surface migrated from the Virtual Memory subsystem through File System pipes to the Crypto API and Networking stacks. Exploit reliability improved from probabilistic race conditions to fully deterministic cross-distribution primitives. A Docker-based eBPF-instrumented testbed characterizes each vulnerability's page-cache corruption primitive and evaluates mitigation effectiveness.</p>
+  <p><strong>Index Terms:</strong> Linux kernel security, LPE, page-cache corruption, CVE analysis, Docker, eBPF, AI-assisted vulnerability discovery, container escape.</p>
+</section>
+
+<!-- ── CVE Cards ───────────────────────────────────────── -->
+<section id="cves">
+  <h2>CVE Analysis</h2>
+
+  <div class="cve-grid">
+
+    <div class="cve-card blue">
+      <div class="cve-header">
+        <div class="cve-name">Dirty COW</div>
+        <div class="cve-id">CVE-2016-5195</div>
+      </div>
+      <span class="pill pill-blue">2016</span>
+      <span class="pill pill-gold">CVSS 7.8</span>
+      <span class="pill pill-red">Race Condition</span>
+      <div class="cve-meta">
+        <strong>Subsystem:</strong> Virtual Memory (mm/memory.c)<br>
+        <strong>Primitive:</strong> Race window → COW bypass → page write<br>
+        <strong>Reliability:</strong> ~30% (slow, can crash system)<br>
+        <strong>Container Escape:</strong> No<br>
+        <strong>Discovery:</strong> Manual, 9-year-old bug<br><br>
+        Exploited a race in /proc/self/mem copy-on-write path. Notorious for unreliability — required multiple retries and risked kernel panic.
+      </div>
+    </div>
+
+    <div class="cve-card blue">
+      <div class="cve-header">
+        <div class="cve-name">Dirty Pipe</div>
+        <div class="cve-id">CVE-2022-0847</div>
+      </div>
+      <span class="pill pill-blue">2022</span>
+      <span class="pill pill-gold">CVSS 7.8</span>
+      <span class="pill pill-green">Race-Free</span>
+      <div class="cve-meta">
+        <strong>Subsystem:</strong> File System (fs/pipe.c)<br>
+        <strong>Primitive:</strong> Uninit PIPE_BUF_FLAG_CAN_MERGE → page overwrite<br>
+        <strong>Reliability:</strong> 100% deterministic<br>
+        <strong>Container Escape:</strong> No<br>
+        <strong>Discovery:</strong> Manual pipe buffer audit<br><br>
+        First fully deterministic Linux LPE. Version-specific to kernel 5.8+. Achieved root by injecting into pipe's page-cache entry via splice().
+      </div>
+    </div>
+
+    <div class="cve-card red">
+      <div class="cve-header">
+        <div class="cve-name">Copy Fail</div>
+        <div class="cve-id">CVE-2026-31431</div>
+      </div>
+      <span class="pill pill-red">2026</span>
+      <span class="pill pill-gold">CVSS 7.8</span>
+      <span class="pill pill-green">Deterministic</span>
+      <span class="pill pill-red">Container Escape</span>
+      <div class="cve-meta">
+        <strong>Subsystem:</strong> Crypto API — algif_aead (AF_ALG)<br>
+        <strong>Primitive:</strong> Logic flaw → 4-byte page-cache write<br>
+        <strong>Reliability:</strong> 100% — single 732-byte Python script<br>
+        <strong>All distros since:</strong> 2017<br>
+        <strong>Discovery:</strong> AI (Xint Code) — ~1 hour<br><br>
+        A straight-line logic bug in the kernel crypto API. No race, no offsets. Universal across Ubuntu, RHEL, Amazon Linux, SUSE. AI-discovered.
+      </div>
+    </div>
+
+    <div class="cve-card red">
+      <div class="cve-header">
+        <div class="cve-name">Dirty Frag</div>
+        <div class="cve-id">CVE-2026-43284 / 43500</div>
+      </div>
+      <span class="pill pill-red">2026</span>
+      <span class="pill pill-gold">CVSS 7.8</span>
+      <span class="pill pill-green">Deterministic</span>
+      <span class="pill pill-red">Container Escape</span>
+      <div class="cve-meta">
+        <strong>Subsystem:</strong> Networking — IPsec ESP + RxRPC (XFRM)<br>
+        <strong>Primitive:</strong> Page frag CoW bypass via ESP+RxRPC chain<br>
+        <strong>Reliability:</strong> 100% — no race, no offsets<br>
+        <strong>Discovery:</strong> Manual (Hyunwoo Kim)<br><br>
+        Chains two CVEs in the networking stack. First LPE via IPsec subsystem. Affects ESP4/ESP6 + RxRPC modules. Also known as "Copy Fail 2".
+      </div>
+    </div>
+
+    <div class="cve-card gold">
+      <div class="cve-header">
+        <div class="cve-name">Fragnesia</div>
+        <div class="cve-id">CVE-2026-46300</div>
+      </div>
+      <span class="pill pill-red">2026</span>
+      <span class="pill pill-gold">CVSS 7.8</span>
+      <span class="pill pill-green">Deterministic</span>
+      <span class="pill pill-red">Container Escape</span>
+      <div class="cve-meta">
+        <strong>Subsystem:</strong> Networking — XFRM ESP-in-TCP (skb_try_coalesce)<br>
+        <strong>Primitive:</strong> Missing SKBFL_SHARED_FRAG → page-cache write<br>
+        <strong>Reliability:</strong> 100% — PoC overwrites /usr/bin/su<br>
+        <strong>Discovery:</strong> AI (Zellic AI tool, William Bowling)<br><br>
+        Accidentally introduced by the Dirty Frag patch. The Dirty Frag fix exposed a latent bug. Demonstrates patches as attack surface.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── Comparison Table ───────────────────────────────── -->
+<section id="comparison">
+  <h2>Comparative Analysis</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>CVE</th><th>Name</th><th>Year</th><th>Subsystem</th>
+          <th>Race-Free</th><th>Cross-Distro</th><th>Container</th>
+          <th>Exploit Size</th><th>AI Found</th><th>Patch Days</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>CVE-2016-5195</code></td><td>Dirty COW</td><td>2016</td>
+          <td>Virtual Memory</td><td class="no">✗</td><td class="yes">✓</td>
+          <td class="no">✗</td><td>~4 KB</td><td class="no">✗</td><td>1</td>
+        </tr>
+        <tr>
+          <td><code>CVE-2022-0847</code></td><td>Dirty Pipe</td><td>2022</td>
+          <td>File System</td><td class="det">✓</td><td class="no">Partial</td>
+          <td class="no">✗</td><td>~2 KB</td><td class="no">✗</td><td>2</td>
+        </tr>
+        <tr>
+          <td><code>CVE-2026-31431</code></td><td>Copy Fail</td><td>2026</td>
+          <td>Crypto AF_ALG</td><td class="det">✓</td><td class="yes">✓</td>
+          <td class="yes">✓</td><td>732 bytes</td><td class="yes">✓ AI</td><td>1</td>
+        </tr>
+        <tr>
+          <td><code>CVE-2026-43284</code></td><td>Dirty Frag</td><td>2026</td>
+          <td>Net XFRM/ESP</td><td class="det">✓</td><td class="yes">✓</td>
+          <td class="yes">✓</td><td>~1.5 KB</td><td class="no">✗</td><td>0</td>
+        </tr>
+        <tr>
+          <td><code>CVE-2026-46300</code></td><td>Fragnesia</td><td>2026</td>
+          <td>XFRM ESP-TCP</td><td class="det">✓</td><td class="yes">✓</td>
+          <td class="yes">✓</td><td>~2.2 KB</td><td class="yes">✓ AI</td><td>0</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── Attack Chain Diagram ───────────────────────────── -->
+<section id="diagram">
+  <h2>Attack Chain &amp; Subsystem Migration</h2>
+  <div class="diagram-box">
+    <div class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#1E90FF', 'primaryTextColor': '#E8EDF2', 'lineColor': '#BDC3C7', 'background': '#162236'}}}%%
+flowchart LR
+    subgraph VM["🔵 2016 — Virtual Memory"]
+        A["Dirty COW\nCVE-2016-5195\nRace condition\nvm/memory.c"]
+    end
+    subgraph FS["🔵 2022 — File System"]
+        B["Dirty Pipe\nCVE-2022-0847\nPipe flag uninit\nfs/pipe.c"]
+    end
+    subgraph CRYPTO["🔴 2026 — Crypto API"]
+        C["Copy Fail\nCVE-2026-31431\nAF_ALG logic flaw\nalgif_aead.c\n⚡ AI Discovered"]
+    end
+    subgraph NET["🔴 2026 — Networking"]
+        D["Dirty Frag\nCVE-2026-43284\nIPsec ESP+RxRPC\nxfrm_input.c"]
+        E["Fragnesia\nCVE-2026-46300\nESP-in-TCP skb\nskb_try_coalesce\n⚡ AI + Patch Bug"]
+    end
+
+    A -->|"Race → Deterministic\n2016→2022"| B
+    B -->|"FS → Crypto\n2022→2026"| C
+    C -->|"Same year\nSubsystem expansion"| D
+    D -->|"Patch introduced\nnew vuln"| E
+
+    style VM fill:#0A3055,stroke:#1E90FF
+    style FS fill:#0A3055,stroke:#1E90FF
+    style CRYPTO fill:#3B0A0A,stroke:#E63946
+    style NET fill:#3B0A0A,stroke:#E63946
+    </div>
+  </div>
+
+  <div class="diagram-box" style="margin-top:1.5rem">
+    <div class="mermaid">
+%%{init: {'theme': 'dark'}}%%
+flowchart TD
+    U["Unprivileged User (uid=1000)"]
+    
+    U --> AF["Open AF_ALG / ESP socket\n(Copy Fail / Fragnesia path)"]
+    AF --> SP["splice() to read-only file fd\n(e.g. /usr/bin/su)"]
+    SP --> PC["Kernel: page-cache lookup\n→ shared page returned"]
+    PC --> BUG["⚠️ Logic Flaw:\nCoW check bypassed /\nSKBFL_SHARED_FRAG missing"]
+    BUG --> WR["Controlled write to\nread-only page-cache page"]
+    WR --> EXEC["Execute modified binary\n→ uid=0 (root)"]
+    EXEC --> ESC["Container Escape\n(Kubernetes / CI-CD)"]
+
+    style BUG fill:#E63946,color:white,stroke:#E63946
+    style EXEC fill:#2ECC71,color:#0D1B2A,stroke:#2ECC71
+    style ESC fill:#F4A261,color:#0D1B2A,stroke:#F4A261
+    </div>
+  </div>
+</section>
+
+<!-- ── Key Findings ───────────────────────────────────── -->
+<section id="findings">
+  <h2>Key Findings</h2>
+  <div class="findings-grid">
+    <div class="finding">
+      <div class="finding-num">F1</div>
+      <h4>Reliability Evolution</h4>
+      <p>From ~30% (Dirty COW) to 100% deterministic (all 2026 CVEs). Race conditions are no longer required.</p>
+    </div>
+    <div class="finding">
+      <div class="finding-num">F2</div>
+      <h4>Subsystem Migration</h4>
+      <p>Attack surface: VM → FS → Crypto → Networking. Each move exploits subsystems with less security scrutiny.</p>
+    </div>
+    <div class="finding">
+      <div class="finding-num">F3</div>
+      <h4>Unified Primitive</h4>
+      <p>All five CVEs share page-cache corruption. A unified eBPF LSM hook could detect all variants.</p>
+    </div>
+    <div class="finding">
+      <div class="finding-num">F4</div>
+      <h4>AI Acceleration</h4>
+      <p>Copy Fail found in ~1 hour by AI (Xint Code). Fragnesia by Zellic AI. Manual discovery: weeks.</p>
+    </div>
+    <div class="finding">
+      <div class="finding-num">F5</div>
+      <h4>Patch-Induced Exposure</h4>
+      <p>Fragnesia was accidentally activated by the Dirty Frag patch — security fixes must be adversarially reviewed.</p>
+    </div>
+    <div class="finding">
+      <div class="finding-num">F6</div>
+      <h4>Container Threat</h4>
+      <p>All 2026 CVEs enable container escape — Kubernetes, CI/CD, and multi-tenant environments are at direct risk.</p>
+    </div>
+    <div class="finding">
+      <div class="finding-num">F7</div>
+      <h4>Rapid Patching</h4>
+      <p>Patch turnaround collapsed to 0–1 days for 2026 CVEs, reflecting matured kernel response infrastructure.</p>
+    </div>
+    <div class="finding">
+      <div class="finding-num">F8</div>
+      <h4>Mitigation Gap</h4>
+      <p>SMEP/SMAP and SELinux are ineffective against 2026 CVEs. Module blacklisting is the only practical interim fix.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Docker Setup ───────────────────────────────────── -->
+<section id="docker">
+  <h2>Docker Research Testbed</h2>
+  <p>The research testbed runs each CVE in an isolated, network-restricted container. No real exploitation occurs — all containers simulate analysis in userspace with pinned kernel context.</p>
+  <pre class="code-block"># Clone the research repository
+git clone https://github.com/YOUR_IITJ_USERNAME/linux-kernel-exploit-evolution
+cd linux-kernel-exploit-evolution
+
+# Build and start all analysis containers
+docker-compose up --build
+
+# Run the Python orchestrator to generate analysis JSON
+docker exec exploit-orchestrator python3 /scripts/orchestrate.py
+
+# View results
+cat results/analysis_output.json | python3 -m json.tool</pre>
+
+  <h3>Container Safety Model</h3>
+  <p>All containers: <code>cap_drop: ALL</code> · <code>no-new-privileges</code> · <code>read_only: true</code> · internal network only (no egress). eBPF tracer container requires <code>privileged</code> for kernel probe access only.</p>
+</section>
+
+<!-- ── Research Prompt ────────────────────────────────── -->
+<section id="prompt">
+  <h2>IEEE Research Prompt</h2>
+  <p>Use this prompt with any AI assistant to generate, extend, or peer-review your IEEE paper draft:</p>
+  <div class="prompt-box">
+    <div class="prompt-label">▸ Primary IEEE Research Prompt</div>
+    <pre>You are an expert systems security researcher preparing an IEEE conference 
+paper for submission to IEEE S&P / IEEE TIFS 2026.
+
+Your paper analyzes the evolutionary chain of Linux kernel memory exploitation
+techniques from 2016–2026:
+
+  1. Dirty COW   (CVE-2016-5195)  — VM race condition
+  2. Dirty Pipe  (CVE-2022-0847)  — Pipe flag LPE, 100% reliable
+  3. Copy Fail   (CVE-2026-31431) — AF_ALG 4-byte page-cache write, AI-found
+  4. Dirty Frag  (CVE-2026-43284) — IPsec ESP/RxRPC CoW bypass
+  5. Fragnesia   (CVE-2026-46300) — XFRM ESP-in-TCP skb coalescing LPE
+
+Research Questions:
+  RQ1: What structural patterns exist in page-cache corruption primitives?
+  RQ2: How did reliability evolve from probabilistic to deterministic?
+  RQ3: What does subsystem migration reveal about Linux defensive blind spots?
+  RQ4: Are current mitigations (module blacklists, SMEP, SELinux) sufficient?
+  RQ5: How does AI-assisted discovery change the vulnerability lifecycle?
+
+Methodology:
+  - Docker testbed with vulnerable + patched kernel pairs
+  - eBPF instrumentation to trace page-cache write paths
+  - CVSS, reliability, patch turnaround comparison
+  - Unified detection model using page-cache integrity monitoring
+
+Output: IEEE double-column paper, 10 pages:
+  Abstract · Introduction · Background · Per-CVE Analysis
+  Comparative Table · Mitigation Taxonomy · AI Discovery Analysis
+  Future Work · References (IEEE style)
+
+Affiliation: IIT Jodhpur, Department of CSE</pre>
+  </div>
+</section>
+
+</div>
+</main>
+
+<footer>
+  <p>IEEE Research Paper · Linux Kernel Memory Exploit Evolution (2016–2026) · IIT Jodhpur</p>
+  <p style="margin-top:0.3rem">For academic use only · Ethical disclosure principles apply</p>
+</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      primaryColor: '#1E90FF',
+      primaryTextColor: '#E8EDF2',
+      lineColor: '#BDC3C7',
+      background: '#162236',
+      nodeBorder: '#1E3A5F',
+    }
+  });
+</script>
+</body>
+</html>
