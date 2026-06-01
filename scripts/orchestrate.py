@@ -137,6 +137,49 @@ CVE_DATABASE = [
 
 # ─── Analysis Engine ──────────────────────────────────────────────────────────
 
+def generate_exploit_log(profile: ExploitProfile) -> str:
+    """Generate simulated attacker terminal output for educational purposes."""
+    log = []
+    log.append(f"[+] Initializing exploit chain for {profile.name} ({profile.cve_id})")
+    log.append(f"[*] Target subsystem: {profile.subsystem}")
+    log.append(f"[*] Exploit payload size: {profile.exploit_size_bytes} bytes")
+    
+    if profile.race_condition:
+        log.append(f"[*] Attempting to win race condition in {profile.kernel_component}...")
+        log.append("[*] Thread 1: writing to /proc/self/mem")
+        log.append("[*] Thread 2: madvise(MADV_DONTNEED)")
+        log.append("[!] Race won after 14,302 attempts.")
+    else:
+        log.append(f"[*] Exploiting logic flaw in {profile.kernel_component} (Deterministic)")
+        log.append("[*] Mapping target file into page cache...")
+        log.append(f"[*] Overwriting page cache backing memory...")
+
+    log.append("[+] Page-cache corruption successful. Bypassed Copy-on-Write (CoW).")
+    log.append("[+] Payload executed as UID 0.")
+    if profile.affects_containers:
+        log.append("[!] Container escape successful. Root access on host achieved.")
+    log.append("[+] Spawned root shell: /bin/bash")
+    return "\n".join(log)
+
+def generate_mitigation_log(profile: ExploitProfile) -> str:
+    """Generate simulated kernel/eBPF interception log for educational purposes."""
+    log = []
+    log.append(f"[KERNEL SEC] eBPF Sensor initialized for {profile.cve_id} mitigation.")
+    log.append(f"[KERNEL SEC] Monitoring {profile.kernel_component}...")
+    
+    if "Dirty COW" in profile.name:
+        log.append("[DETECT] eBPF: High frequency PTRACE_POKEDATA on /proc/self/mem detected.")
+        log.append("[BLOCK] Action blocked. Process PID 4092 terminated (SIGKILL).")
+    elif "Dirty Pipe" in profile.name:
+        log.append("[DETECT] Kernel Audit: pipe_write with PIPE_BUF_FLAG_CAN_MERGE on read-only page.")
+        log.append("[BLOCK] splice() operation denied (EPERM).")
+    else:
+        log.append(f"[DETECT] Unprivileged anomalous behavior in {profile.subsystem}.")
+        log.append("[BLOCK] Page-cache write aborted. Privilege escalation thwarted.")
+        
+    log.append("[KERNEL SEC] System remains secure.")
+    return "\n".join(log)
+
 def analyze_exploit(profile: ExploitProfile) -> AnalysisResult:
     """Analyze exploit characteristics for research documentation."""
     
@@ -288,6 +331,16 @@ def main():
         print(f"    Reliability: {profile.reliability}")
         print(f"    Container threat: {'YES' if profile.affects_containers else 'No'}")
         print(f"    AI discovered: {'YES' if 'AI' in profile.discovery_method else 'No'}")
+
+        # Generate and save educational logs
+        exploit_log = generate_exploit_log(profile)
+        mitigation_log = generate_mitigation_log(profile)
+        
+        os.makedirs("/results", exist_ok=True)
+        with open(f"/results/{profile.cve_id}_exploit.log", "w") as f:
+            f.write(exploit_log)
+        with open(f"/results/{profile.cve_id}_mitigation.log", "w") as f:
+            f.write(mitigation_log)
 
     # Comparative table
     table = generate_comparative_table(results)

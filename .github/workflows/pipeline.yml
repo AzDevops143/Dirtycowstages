@@ -24,8 +24,8 @@ jobs:
         # Running with sudo because orchestrate.py writes to the root /results folder
         sudo python3 scripts/orchestrate.py
 
-    - name: Upload Analysis JSON
+    - name: Upload Analysis Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: analysis-results
-        path: /results/analysis_output.json
+        path: /results/
