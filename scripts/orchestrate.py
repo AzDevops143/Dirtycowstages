@@ -11,6 +11,7 @@ controlled research environment (no actual exploitation).
 import json
 import time
 import datetime
+import argparse
 from dataclasses import dataclass, asdict
 from typing import List
 import os
@@ -316,13 +317,19 @@ def generate_evolution_insights(results: List[AnalysisResult]) -> List[str]:
 # ─── Main Execution ───────────────────────────────────────────────────────────
 
 def main():
+    parser = argparse.ArgumentParser(description="Linux Kernel Exploit Orchestrator")
+    parser.add_argument("--cve", type=str, help="Specific CVE ID to analyze")
+    args = parser.parse_args()
+
     print("=" * 70)
     print("Linux Kernel Exploit Evolution — Research Orchestrator")
     print("IEEE Paper Analysis Pipeline")
     print("=" * 70)
 
     results = []
-    for profile in CVE_DATABASE:
+    profiles_to_run = [p for p in CVE_DATABASE if p.cve_id == args.cve] if args.cve else CVE_DATABASE
+
+    for profile in profiles_to_run:
         print(f"\n[*] Analyzing {profile.name} ({profile.cve_id})...")
         time.sleep(0.1)
         result = analyze_exploit(profile)
@@ -362,7 +369,7 @@ def main():
     }
 
     os.makedirs("/results", exist_ok=True)
-    out_path = "/results/analysis_output.json"
+    out_path = f"/results/analysis_output_{args.cve}.json" if args.cve else "/results/analysis_output_all.json"
     with open(out_path, "w") as f:
         json.dump(output, f, indent=2)
 

@@ -8,8 +8,12 @@ on:
 
 jobs:
   run-analysis:
-    name: Exploit Analysis
+    name: Exploit Analysis (${{ matrix.cve }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cve: [CVE-2016-5195, CVE-2022-0847, CVE-2026-31431, CVE-2026-43284, CVE-2026-46300]
+        
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -19,13 +23,13 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Execute Orchestrator Script
+    - name: Execute Orchestrator Script for ${{ matrix.cve }}
       run: |
-        # Running with sudo because orchestrate.py writes to the root /results folder
-        sudo python3 scripts/orchestrate.py
+        # Pass the specific CVE to the orchestrator script
+        sudo python3 scripts/orchestrate.py --cve ${{ matrix.cve }}
 
-    - name: Upload Analysis Artifacts
+    - name: Upload Logs & Results
       uses: actions/upload-artifact@v4
       with:
-        name: analysis-results
+        name: analysis-results-${{ matrix.cve }}
         path: /results/
