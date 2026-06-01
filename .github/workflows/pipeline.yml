@@ -12,10 +12,10 @@ jobs:
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
@@ -30,13 +30,13 @@ jobs:
         root_file: IEEE_paper_linux_kernel_exploits.tex
 
     - name: Upload Analysis Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: analysis-results
         path: /results/analysis_output.json
 
     - name: Upload Compiled Paper
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ieee-paper
         path: IEEE_paper_linux_kernel_exploits.pdf
