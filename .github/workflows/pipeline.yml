@@ -1,0 +1,42 @@
+name: Research Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  analyze-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Run Orchestrator Analysis
+      run: |
+        # Running with sudo because orchestrate.py writes to the root /results folder
+        sudo python3 scripts/orchestrate.py
+
+    - name: Compile IEEE Paper (LaTeX)
+      uses: xu-cheng/latex-action@v3
+      with:
+        root_file: IEEE_paper_linux_kernel_exploits.tex
+
+    - name: Upload Analysis Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: analysis-results
+        path: /results/analysis_output.json
+
+    - name: Upload Compiled Paper
+      uses: actions/upload-artifact@v3
+      with:
+        name: ieee-paper
+        path: IEEE_paper_linux_kernel_exploits.pdf
