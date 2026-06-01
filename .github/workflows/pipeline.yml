@@ -8,7 +8,7 @@ on:
 
 jobs:
   run-analysis:
-    name: Stage 1 - Exploit Analysis
+    name: Exploit Analysis
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Repository
@@ -29,22 +29,3 @@ jobs:
       with:
         name: analysis-results
         path: /results/analysis_output.json
-
-  compile-paper:
-    name: Stage 2 - Compile IEEE Paper
-    runs-on: ubuntu-latest
-    needs: run-analysis
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-
-    - name: Build LaTeX Document
-      uses: xu-cheng/latex-action@v3
-      with:
-        root_file: IEEE_paper_linux_kernel_exploits.tex
-
-    - name: Upload PDF Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ieee-paper
-        path: IEEE_paper_linux_kernel_exploits.pdf
