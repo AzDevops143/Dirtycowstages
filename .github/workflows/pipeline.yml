@@ -7,29 +7,92 @@ on:
     branches: [ "main" ]
 
 jobs:
-  run-analysis:
-    name: Exploit Analysis (${{ matrix.cve }})
+  dirty-cow:
+    name: Exploit Analysis (CVE-2016-5195)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        cve: [CVE-2016-5195, CVE-2022-0847, CVE-2026-31431, CVE-2026-43284, CVE-2026-46300]
-        
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
-
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-
-    - name: Execute Orchestrator Script for ${{ matrix.cve }}
-      run: |
-        # Pass the specific CVE to the orchestrator script
-        sudo python3 scripts/orchestrate.py --cve ${{ matrix.cve }}
-
+    - name: Execute Orchestrator Script
+      run: sudo python3 scripts/orchestrate.py --cve CVE-2016-5195
     - name: Upload Logs & Results
       uses: actions/upload-artifact@v4
       with:
-        name: analysis-results-${{ matrix.cve }}
+        name: analysis-results-CVE-2016-5195
+        path: /results/
+
+  dirty-pipe:
+    name: Exploit Analysis (CVE-2022-0847)
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    - name: Execute Orchestrator Script
+      run: sudo python3 scripts/orchestrate.py --cve CVE-2022-0847
+    - name: Upload Logs & Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: analysis-results-CVE-2022-0847
+        path: /results/
+
+  copy-fail:
+    name: Exploit Analysis (CVE-2026-31431)
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    - name: Execute Orchestrator Script
+      run: sudo python3 scripts/orchestrate.py --cve CVE-2026-31431
+    - name: Upload Logs & Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: analysis-results-CVE-2026-31431
+        path: /results/
+
+  dirty-frag:
+    name: Exploit Analysis (CVE-2026-43284)
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    - name: Execute Orchestrator Script
+      run: sudo python3 scripts/orchestrate.py --cve CVE-2026-43284
+    - name: Upload Logs & Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: analysis-results-CVE-2026-43284
+        path: /results/
+
+  fragnesia:
+    name: Exploit Analysis (CVE-2026-46300)
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    - name: Execute Orchestrator Script
+      run: sudo python3 scripts/orchestrate.py --cve CVE-2026-46300
+    - name: Upload Logs & Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: analysis-results-CVE-2026-46300
         path: /results/
