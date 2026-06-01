@@ -1,6 +1,6 @@
 # Linux Kernel Exploit Evolution (2016-2026)
 
-> **IEEE Research Repository** | IIT Jodhpur, Department of CSE
+> **IEEE Research Repository** | IIT Jodhpur, SAIDE
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Paper: IEEE](https://img.shields.io/badge/Paper-IEEE%20Submission-red.svg)]()
@@ -14,8 +14,8 @@
 
 **"Page-Cache Corruption Primitives: Evolution of Linux Kernel Local Privilege Escalation (2016-2026)"**
 
-*[Author Name], Prof. [Supervisor Name]*  
-*Department of Computer Science & Engineering, IIT Jodhpur*  
+*Charantej, Atreyee, Nidhi, Prof. Sushil*  
+*SAIDE (School of Artificial Intelligence and Data engineering), IIT Jodhpur*  
 *Submitted to: [IEEE Conference Name] 2026*
 
 > Note: Citation information and DOI will be provided after the paper is accepted.
@@ -114,4 +114,4 @@ Our team followed strict ethical guidelines during this research:
 ## Reach Out
 
 - For research-related questions, email: `{author}@iitj.ac.in`
-- Academic Supervisor: Prof. [Name], Department of CSE, IIT Jodhpur
+- Academic Supervisor: Prof. [Name], SAIDE, IIT Jodhpur
