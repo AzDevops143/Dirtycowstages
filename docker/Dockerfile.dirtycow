@@ -1,0 +1,38 @@
+# ============================================================
+# Dirty COW (CVE-2016-5195) Educational Docker Environment
+# ============================================================
+# Base Image: Ubuntu 14.04 (Trusty Tahr)
+# This is a period-accurate base image representing a standard 
+# server environment from 2016.
+#
+# IMPORTANT KERNEL NOTE FOR STUDENTS:
+# Docker shares the host machine's kernel! This container will 
+# ONLY be vulnerable to Dirty COW if the underlying host VM 
+# is running a vulnerable Linux kernel (e.g., 4.4.0-21-generic).
+# ============================================================
+
+FROM ubuntu:14.04
+
+# Install basic tools required to compile and run the exploit C code
+RUN apt-get update && apt-get install -y \
+    gcc \
+    make \
+    vim \
+    nano \
+    sudo \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up the workspace
+WORKDIR /exploit_lab
+
+# Create a read-only target file to demonstrate the exploit
+# We give it 444 permissions (read-only for everyone, including the owner)
+RUN echo "THIS IS A SECURE READ-ONLY SYSTEM FILE. UNAUTHORIZED MODIFICATION PROHIBITED." > /exploit_lab/target_file.txt
+RUN chmod 444 /exploit_lab/target_file.txt
+
+# Create a standard, non-root user for the demonstration
+RUN useradd -ms /bin/bash student
+USER student
+
+# Keep the container running in the background so students can attach to it via terminal
+CMD ["/bin/bash", "-c", "echo 'Dirty COW Lab Container Started. Drop into a shell to begin.'; tail -f /dev/null"]
